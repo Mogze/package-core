@@ -47,6 +47,11 @@ namespace Mogze.Core
                     PlayerPrefs.SetString(StartScenePathKey, startScenePath);
                     PlayerPrefs.Save();
                 }
+                else
+                {
+                    PlayerPrefs.DeleteKey(StartScenePathKey);
+                    PlayerPrefs.Save();
+                }
             }
         }
 
