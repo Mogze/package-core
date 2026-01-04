@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -21,7 +19,10 @@ namespace Mogze.Core
 
     public class EditorBasics : EditorWindow
     {
+        private static Object _startScene;
         public const string StartScenePathKey = "StartScenePathKey";
+        private static Object _testScene;
+        public const string TestScenePathKey = "TestScenePathKey";
 
         [MenuItem("Mogze/Start Scene Picker")]
         static void Init()
@@ -29,29 +30,45 @@ namespace Mogze.Core
             GetWindow<EditorBasics>().Show();
             if (PlayerPrefs.HasKey(StartScenePathKey))
             {
-                var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(PlayerPrefs.GetString(StartScenePathKey));
-                EditorSceneManager.playModeStartScene = sceneAsset;
+                _startScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(PlayerPrefs.GetString(StartScenePathKey));
+            }
+
+            if (PlayerPrefs.HasKey(TestScenePathKey))
+            {
+                _testScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(PlayerPrefs.GetString(TestScenePathKey));
             }
         }
 
         void OnGUI()
         {
-            var sceneAsset = (SceneAsset)EditorGUILayout.ObjectField(new GUIContent("Start Scene"), EditorSceneManager.playModeStartScene, typeof(SceneAsset), false);
-            EditorSceneManager.playModeStartScene = sceneAsset;
+            var sceneAsset = (SceneAsset)EditorGUILayout.ObjectField(new GUIContent("Start Scene"), _startScene, typeof(SceneAsset), false);
+            _startScene = sceneAsset;
             var startScenePath = AssetDatabase.GetAssetPath(sceneAsset);
+            
+            var testSceneAsset = (SceneAsset)EditorGUILayout.ObjectField(new GUIContent("Test Scene"), _testScene, typeof(SceneAsset), false);
+            _testScene = testSceneAsset;
+            var testScenePath = AssetDatabase.GetAssetPath(testSceneAsset);
 
             if (GUILayout.Button("Save"))
             {
                 if (!string.IsNullOrEmpty(startScenePath))
                 {
                     PlayerPrefs.SetString(StartScenePathKey, startScenePath);
-                    PlayerPrefs.Save();
                 }
                 else
                 {
                     PlayerPrefs.DeleteKey(StartScenePathKey);
-                    PlayerPrefs.Save();
                 }
+
+                if (!string.IsNullOrEmpty(testScenePath))
+                {
+                    PlayerPrefs.SetString(TestScenePathKey, testScenePath);
+                }
+                else
+                {
+                    PlayerPrefs.DeleteKey(TestScenePathKey);
+                }
+                PlayerPrefs.Save();
             }
         }
 
@@ -61,6 +78,35 @@ namespace Mogze.Core
         {
             PlayerPrefs.DeleteAll();
             PlayerPrefs.Save();
+        }
+    }
+    
+    [InitializeOnLoad]
+    public class TestSceneButton
+    {
+        static TestSceneButton()
+        {
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+    
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+        }
+    
+        [MenuItem("Mogze/Play Test Scene &t")] // Alt+T shortcut
+        private static void PlayTestScene()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                return;
+            }
+        
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(PlayerPrefs.GetString(EditorBasics.TestScenePathKey));
+                EditorSceneManager.playModeStartScene = sceneAsset;
+                EditorApplication.isPlaying = true;
+            }
         }
     }
 }
